@@ -58,7 +58,7 @@ userShema.pre("save", async function (next) {
 
 userShema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
-}
+};
 
 userShema.methods.generateAccessToken = function () {
   return jwt.sign(
@@ -72,8 +72,8 @@ userShema.methods.generateAccessToken = function () {
     {
       expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
     }
-  )
-}
+  );
+};
 
 userShema.methods.generateRefreshToken = function () {
   return jwt.sign(
@@ -85,6 +85,6 @@ userShema.methods.generateRefreshToken = function () {
       expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
     }
   );
-}
+};
 
 export const User = mongoose.model("User", userShema);
