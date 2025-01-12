@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -235,7 +236,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
-  const user = User.findById(req.user?._id);
+  const user = await User.findById(req.user?._id);
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
 
@@ -264,7 +265,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const user = User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user._id,
     {
       $set: {
@@ -303,6 +304,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   );
 
+  // console.log("User: ", user);
+
   // Delete old avatar
   await deleteFromCloudinary(req.user.avatar);
 
@@ -334,7 +337,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  await deleteFromCloudinary(req.user.avatar);
+  await deleteFromCloudinary(req.user.coverImage);
 
   return res
     .status(200)
@@ -343,8 +346,9 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
+  // console.log("Username: ", username);
 
-  if (username?.trim()) {
+  if (!username?.trim()) {
     throw new ApiError(400, "Username is missing");
   }
 
@@ -376,7 +380,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
           $size: "$subscribers",
         },
         channelSubscribedToCount: {
-          $size: "subscribedTo",
+          $size: "$subscribedTo",
         },
         isSubscribed: {
           $cond: {

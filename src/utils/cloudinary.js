@@ -1,5 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
+import { ApiError } from "./ApiError.js";
+import { ApiResponse } from "./ApiResponse.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -15,7 +17,6 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto",
     });
 
-    // console.log("File uploaded to Cloudinary ", response.url);
     // console.log("Response: ", response);
 
     fs.unlinkSync(localFilePath);
@@ -23,23 +24,21 @@ const uploadOnCloudinary = async (localFilePath) => {
   } catch (error) {
     fs.unlinkSync(localFilePath);
 
-    return null;
+    return new ApiError(500, "Failed to upload file to Cloudinary");
   }
 };
 
-const deleteFromCloudinary = async (publicId) => {
+const deleteFromCloudinary = async (url) => {
+  if (!url) return null;
+
+  const publicId = url.split("/").pop().split(".")[0];
+
   try {
-    if (!publicId) return null;
+    await cloudinary.uploader.destroy(publicId);
 
-    const response = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "auto",
-    });
-
-    // console.log("File deleted from Cloudinary ", response.result);
-
-    return response;
-  } catch (error) {
-    return null;
+    return new ApiResponse(200, null, "File deleted from Cloudinary");
+  } catch {
+    throw new ApiError(500, "Failed to delete file from Cloudinary");
   }
 };
 
