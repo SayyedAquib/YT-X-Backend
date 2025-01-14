@@ -1,5 +1,6 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -60,7 +61,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
-  if (!videoId?.trim()) {
+  if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Video ID is required.");
   }
 
@@ -78,7 +79,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
-  if (!videoId?.trim()) {
+  if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Video ID is required.");
   }
 
@@ -134,13 +135,11 @@ const updateVideo = asyncHandler(async (req, res) => {
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
-  if (!videoId?.trim()) {
+  if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Video ID is required.");
   }
 
   const video = await Video.findById(videoId);
-
-  console.log("Video: ", video);
 
   if (!video) {
     throw new ApiError(404, "Video does not exist");
@@ -178,10 +177,54 @@ const deleteVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, null, "Video deleted successfully"));
 });
 
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Video ID is required.");
+  }
+
+  const video = await Video.findById(videoId);
+
+  const { isPublised } = video;
+
+  if (!video) {
+    throw new ApiError(404, "Video does not exist");
+  }
+
+  if (video.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "You are not allowed to change publish status");
+  }
+
+  const updatedPublishStatus = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        isPublised: !isPublised,
+      },
+    },
+    { new: true }
+  );
+
+  if (!updatedPublishStatus) {
+    throw new ApiError(500, "Error while updating publish status");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { updatedPublishStatus },
+        "Publish status updated successfully"
+      )
+    );
+});
 
 export {
   publishAVideo,
   getVideoById,
   updateVideo,
   deleteVideo,
+  togglePublishStatus,
 };
