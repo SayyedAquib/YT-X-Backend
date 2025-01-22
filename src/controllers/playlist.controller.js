@@ -7,7 +7,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
-  //TODO: create playlist
   if ([name, description].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
