@@ -108,4 +108,50 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, like, "Like added successfully"));
 });
 
-export { toggleCommentLike, toggleTweetLike, toggleVideoLike };
+const getLikedVideos = asyncHandler(async (req, res) => {
+  //TODO: get all liked videos
+  const userId = req.user._id;
+
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const likedVideo = await Like.aggregate(
+    [
+      {
+        $match: { likedBy: userId },
+      },
+      {
+        $lookup: {
+          from: "videos",
+          localField: "video",
+          foreignField: "_id",
+          as: "likedVideos",
+        },
+      },
+      {
+        $unwind: "$likedVideos",
+      },
+      {
+        $project: {
+          _id: 0,
+          video: "$likedVideos._id",
+          title: "$likedVideos.title",
+          description: "$likedVideos.description",
+          createdAt: "$likedVideos.createdAt",
+          thumbnail: "$likedVideos.thumbnail",
+        },
+      },
+    ]
+  )
+
+  if (!likedVideo) {
+    throw new ApiError(404, "No liked videos found");
+  }
+
+  return res
+   .status(200)
+   .json(new ApiResponse(200, likedVideo, "Liked videos fetched successfully"));
+});
+
+export { toggleCommentLike, toggleTweetLike, toggleVideoLike, getLikedVideos };
