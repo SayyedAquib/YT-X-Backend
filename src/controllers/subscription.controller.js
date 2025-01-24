@@ -24,6 +24,9 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     channel: channelId,
   });
 
+  console.log(existingSubscription);
+  
+
   if (existingSubscription) {
     // Unsubscribe
     await Subscription.findByIdAndDelete(existingSubscription._id);
@@ -40,7 +43,91 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to create subscription");
   }
 
-  return ApiResponse.sendResponse(res, 200, "Subscribed successfully");
+  return res
+    .status(200)
+    .json(new ApiResponse(200, newSubscription, "Subscribed successfully"));
 });
 
-export { toggleSubscription };
+// controller to return subscriber list of a channel
+const getUserChannelSubscribers = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+
+  if (!isValidObjectId(channelId)) {
+    throw new ApiError(400, "Invalid channel id");
+  }
+
+  const subscribers = await Subscription.aggregate([
+    {
+      $match: {
+        channel: new mongoose.Types.ObjectId(channelId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "subscriber",
+        foreignField: "_id",
+        as: "subscribersDetails",
+      },
+    },
+    {
+      $project: {
+        subscribersDetails: 1,
+        fullName: 1,
+        avatar: 1,
+      },
+    },
+  ]);
+
+  if (!subscribers.length) {
+    throw new ApiError(404, "No subscribers found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, subscribers, "Subscribers fetched successfully")
+    );
+});
+
+// controller to return channel list to which user has subscribed
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+  const { subscriberId } = req.params;
+  console.log(subscriberId);
+  if (!isValidObjectId(subscriberId)) {
+    throw new ApiError(400, "Invalid subscriber id");
+  }
+
+  const channels = await Subscription.aggregate([
+    {
+      $match: {
+        subscriber: new mongoose.Types.ObjectId(subscriberId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "channel",
+        foreignField: "_id",
+        as: "channelsDetails",
+      },
+    },
+    {
+      $project: {
+        channelsDetails: 1,
+        fullName: 1,
+        avatar: 1,
+      },
+    },
+  ]);
+
+  if (!channels.length) {
+    throw new ApiError(404, "No channels found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, channels, "Channels fetched successfully"));
+});
+
+export { toggleSubscription, getUserChannelSubscribers, getSubscribedChannels };
