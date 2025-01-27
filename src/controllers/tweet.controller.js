@@ -32,6 +32,22 @@ const createTweet = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, tweet, "Tweet created successfully."));
 });
 
+const getUserTweets = asyncHandler(async (req, res) => {
+  // TODO: get user tweets
+  const { userId } = req.params;
+
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(400, "Invalid user ID");
+  }
+
+  const tweets = await Tweet.find({ owner: userId });
+
+  if (tweets.length === 0) {
+    throw new ApiError(404, "No tweets found for the user");
+  }
+
+  return res.status(200).json(new ApiResponse(200, tweets, "Tweets fetched successfully."));
+});
 
 const updateTweet = asyncHandler(async (req, res) => {
   //TODO: update tweet
@@ -113,4 +129,4 @@ const deleteTweet = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Tweet deleted successfully."));
 });
 
-export { createTweet, updateTweet, deleteTweet };
+export { createTweet, getUserTweets, updateTweet, deleteTweet };
