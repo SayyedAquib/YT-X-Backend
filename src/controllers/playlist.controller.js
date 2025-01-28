@@ -46,7 +46,6 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
 const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  //TODO: get playlist by id
 
   if (!playlistId) {
     throw new ApiError(400, "Playlist ID is required");

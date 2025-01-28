@@ -5,7 +5,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createTweet = asyncHandler(async (req, res) => {
-  //TODO: create tweet
   const userId = req.user?._id;
 
   if (!isValidObjectId(userId)) {
@@ -50,7 +49,6 @@ const getUserTweets = asyncHandler(async (req, res) => {
 });
 
 const updateTweet = asyncHandler(async (req, res) => {
-  //TODO: update tweet
   const userId = req.user?._id;
 
   if (!isValidObjectId(userId)) {
@@ -95,7 +93,6 @@ const updateTweet = asyncHandler(async (req, res) => {
 });
 
 const deleteTweet = asyncHandler(async (req, res) => {
-  //TODO: delete tweet
   const userId = req.user?._id;
 
   if (!isValidObjectId(userId)) {
