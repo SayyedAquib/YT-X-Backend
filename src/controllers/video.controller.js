@@ -10,8 +10,96 @@ import {
 } from "../utils/cloudinary.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  //TODO: get all videos based on query, sort, pagination
+  let { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  page = isNaN(page) ? 1 : Number(page);
+  limit = isNaN(limit) ? 10 : Number(limit);
+  if (page <= 0) {
+    page = 1;
+  }
+  if (limit <= 0) {
+    page = 10;
+  }
+
+  const matchStage = {};
+  if (userId && isValidObjectId(userId)) {
+    matchStage["$match"] = {
+      owner: new mongoose.Types.ObjectId(userId),
+    };
+  } else if (query) {
+    matchStage["$match"] = {
+      $or: [
+        { title: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+      ],
+    };
+  } else {
+    matchStage["$match"] = {};
+  }
+
+  if (userId && query) {
+    matchStage["$match"] = {
+      $and: [
+        { owner: new mongoose.Types.ObjectId(userId) },
+        {
+          $or: [
+            { title: { $regex: query, $options: "i" } },
+            { description: { $regex: query, $options: "i" } },
+          ],
+        },
+      ],
+    };
+  }
+
+  const joinOwnerStage = {
+    $lookup: {
+      from: "users",
+      localField: "owner",
+      foreignField: "_id",
+      as: "owner",
+      pipeline: [
+        {
+          $project: {
+            username: 1,
+            avatar: 1,
+            fullname: 1,
+          },
+        },
+      ],
+    },
+  };
+
+  const addFieldStage = {
+    $addFields: {
+      owner: {
+        $first: "$owner",
+      },
+    },
+  };
+
+  const sortStage = {};
+  if (sortBy && sortType) {
+    sortStage["$sort"] = {
+      [sortBy]: sortType === "asc" ? 1 : -1,
+    };
+  } else {
+    sortStage["$sort"] = {
+      createdAt: -1,
+    };
+  }
+
+  const skipStage = { $skip: (page - 1) * limit };
+  const limitStage = { $limit: limit };
+
+  const videos = await Video.aggregate([
+    matchStage,
+    joinOwnerStage,
+    addFieldStage,
+    sortStage,
+    skipStage,
+    limitStage,
+  ]);
+
+  res.status(200).json(new ApiResponse(200, videos, "Get videos success"));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -227,6 +315,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 });
 
 export {
+  getAllVideos,
   publishAVideo,
   getVideoById,
   updateVideo,
